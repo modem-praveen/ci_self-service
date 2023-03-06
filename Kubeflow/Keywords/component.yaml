@@ -1,0 +1,75 @@
+name: Prepare keywords
+inputs:
+- {name: Transcription_data, type: JsonObject}
+outputs:
+- {name: keyword_transformed, type: JsonObject}
+implementation:
+  container:
+    image: python:3.11
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'pandas' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'pandas' --user) && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def prepare_keywords(Transcription_data_path , keyword_transformed_path ):
+          import json
+          from json import load
+          import pandas as pd
+
+          null = "null"
+          # load text data
+          with open(Transcription_data_path, 'r') as file:
+              opps_data = load(file)
+          file.close()
+          data=opps_data
+
+          df = pd.DataFrame(columns=["meeting_id", "deal_id", "keyword", "keyword_count"])
+          if data != []:
+              for item in data:
+                  meeting_id = item["object"]["meeting_id"]
+                  deal_ids = item["object"]["deal_ids"]
+                  for keyword in item["object"]["keywords"]:
+                      count = 0
+                      for word_dict in item["object"]["keywords"][keyword]:
+                          count = count + len(word_dict["wordPositions"])
+                      df = df.append({"meeting_id": meeting_id, "deal_id": deal_ids, "keyword": keyword, "keyword_count": count},
+                                     ignore_index=True)
+              df["deal_id"] = df['deal_id'].str[0]
+
+              print("Number of records :",df.shape[0])
+              print("Number of meeting_ids :",df["meeting_id"].count())
+              print("Number of deal_ids :",df["deal_id"].count())
+              print("Number of unique meeting_ids and deal_ids :",df["meeting_id"].nunique(),df["deal_id"].nunique())
+              print("Number of keywords ",df["keyword"].count())
+          else:
+              print("Empty Data")
+
+          json_str = df.to_json(orient='records')
+          json_str=json.loads(json_str)
+          json.dump(json_str, open(keyword_transformed_path, 'w'))
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Prepare keywords', description='')
+      _parser.add_argument("--Transcription-data", dest="Transcription_data_path", type=str, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--keyword-transformed", dest="keyword_transformed_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = prepare_keywords(**_parsed_args)
+    args:
+    - --Transcription-data
+    - {inputPath: Transcription_data}
+    - --keyword-transformed
+    - {outputPath: keyword_transformed}

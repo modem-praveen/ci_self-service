@@ -1,0 +1,11 @@
+{
+  "dev": {
+    "tenant1": {
+      "tenant": "aviso_ci.com",
+      "stacks": {
+        "etl": "etl-qa",
+        "transcription": "transcription-dsci"
+      }
+    }
+  }
+  }

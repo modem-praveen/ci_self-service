@@ -1,0 +1,10 @@
+{
+  "mongo": {
+    "fetch": "https://raw.githubusercontent.com/gnanarepo/kubeflow-utils/v1.2.2/mongo/fetch/component.yaml",
+    "write": "https://raw.githubusercontent.com/gnanarepo/kubeflow-utils/v1.2.2/mongo/write/component.yaml"
+  },
+  "postgres": {
+    "fetch": "https://raw.githubusercontent.com/gnanarepo/kubeflow-utils/v1.2.2/postgres/fetch/component.yaml",
+    "write": "https://raw.githubusercontent.com/gnanarepo/kubeflow-utils/v1.2.2/postgres/write/component.yaml"
+  }
+}

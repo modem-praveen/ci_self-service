@@ -1,0 +1,92 @@
+{
+  "fetch_data": {
+    "Opportunity": {
+      "db_in": "etl",
+      "db_name": "tenant_db_stack",
+      "collection_name": "tenant.OppDS._uip._data",
+      "batch_size": 100,
+      "fields": [
+        "object.extid",
+        "object.values.Opportunity",
+        "object.values.Owner",
+        "object.values.Stage"
+      ]
+    },
+    "Transcription": {
+      "db_in": "etl",
+      "db_name": "tenant_db_transcription-dsci",
+      "collection_name": "tenant.transcription",
+      "batch_size": 100,
+      "fields": [
+        "object.meeting_id",
+        "object.deal_ids",
+        "object.sentiment",
+        "object.keywords",
+        "object.negative_aspects",
+        "object.positive_aspects",
+        "object.topics",
+        "object.meeting_date",
+        "object.buyer_call_sentiment",
+        "object.call_sentiment"
+      ]
+    },
+    "aggregated_metrics_ci": {
+      "db_in": "etl",
+      "db_name": "tenant_db_transcription-dsci",
+      "collection_name": "tenant.aggregated_metrics_ci",
+      "batch_size": 100,
+      "fields": [
+        "object.meeting_id",
+        "object.deal_ids",
+        "object.speaker_sentiment_time_count",
+        "object.user_map"
+      ]
+    }
+  },
+  "fetch_table_details": {
+    "promotor_dectractor_table": {
+      "table_name": "Macheye_Promotor_Table",
+      "schema":"(meeting_id TEXT,deal_id TEXT,speaker_tag TEXT,speaker_sentiment_score numeric(2,1),speaker_name TEXT,promoter_or_detractor TEXT,is_buyer TEXT)",
+      "primary_key": "meeting_id,deal_id,speaker_tag",
+      "mode": "bulk_mode",
+      "write_path": "dev"
+    },
+    "keywords_table": {
+      "table_name": "Macheye_Keywords_Table",
+      "schema":"(meeting_id TEXT,deal_id TEXT,keyword TEXT,keyword_count numeric)",
+      "primary_key": "meeting_id,deal_id,keyword",
+      "mode": "incremental_load",
+      "write_path": "dev"
+    },
+    "topics_table": {
+      "table_name": "Macheye_Topics_Table",
+      "schema":"(meeting_id TEXT,deal_id TEXT,topic_name TEXT,sub_topic_name TEXT,sub_topic_count numeric,duration numeric)",
+      "primary_key": "meeting_id,deal_id,topic_name",
+      "mode": "bulk_mode",
+      "write_path": "dev"
+    },
+    "sentiment_table": {
+      "table_name": "Macheye_Sentiment_Table",
+      "schema":"(meeting_id TEXT,deal_id TEXT,meeting_date TIMESTAMP,sentiment_score numeric,sentiment_category TEXT)",
+      "primary_key": "meeting_id,deal_id",
+      "mode": "incremental_load",
+      "write_path": "dev"
+    },
+    "aspect_table": {
+      "table_name": "macheye_aspect_table",
+      "schema":"(meeting_id TEXT,deal_id TEXT,aspect TEXT,aspect_type TEXT,aspect_count numeric)",
+      "primary_key": "meeting_id,deal_id,aspect,aspect_type",
+      "mode": "incremental_load",
+      "write_path": "dev"
+    },
+    "details_table": {
+      "table_name": "macheye_last_modified_time_table",
+      "schema":"(last_modified_time BIGINT)",
+      "primary_key": "None",
+      "mode": "bulk_mode",
+      "fetch": "All"
+    }
+
+
+  }
+}

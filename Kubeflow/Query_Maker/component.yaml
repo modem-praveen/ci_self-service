@@ -1,0 +1,106 @@
+name: Query maker
+inputs:
+- {name: table_details, type: JsonObject}
+- {name: greenplum_details, type: JsonObject}
+- {name: table_query_trans, type: JsonObject}
+- {name: table_query_agg, type: JsonObject}
+outputs:
+- {name: transformed_query_trans, type: JsonObject}
+- {name: transformed_query_agg, type: JsonObject}
+implementation:
+  container:
+    image: python:3.11
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'pandas' 'psycopg2' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install
+      --quiet --no-warn-script-location 'pandas' 'psycopg2' --user) && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def _make_parent_dirs_and_return_path(file_path: str):
+          import os
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+      def query_maker(table_details ,greenplum_details,table_query_trans,table_query_agg,transformed_query_trans,transformed_query_agg):
+          import time
+          import json
+          from json import load
+          import pandas as pd
+          import psycopg2
+
+          print("correct pipeline")
+          conn = psycopg2.connect(
+              host=greenplum_details["host"],
+              database=greenplum_details["database"],
+              user=greenplum_details["user_name"],
+              password=greenplum_details["password"],
+              port=greenplum_details["port"]
+          )
+
+          conn.autocommit = True
+          cur = conn.cursor()
+          table_name=table_details["table_name"]
+          schema=table_details["schema"]
+          column_name = schema.strip('()').split(' ')[0]
+          schema_type= schema.strip('()').split(' ')[1]
+          print(schema,column_name)
+          try:
+              cur.execute('''
+                   CREATE TABLE {} ({} {});
+               '''.format(table_name,column_name,schema_type))
+
+              print(table_name,column_name,schema)
+              cur.execute('''INSERT INTO {} ({}) VALUES (0);'''.format(table_name,column_name))
+              print("success")
+          except:
+              print("Table Exist")
+
+          cur.execute("SELECT {} FROM {}".format(column_name,table_name))
+          rows = cur.fetchall()
+          for row in rows:
+              print(row)
+              value = int(row[0])  # or int(output[0])
+
+          if table_details["fetch"] == "All":
+              last_modified= 0
+          else:
+              last_modified = value
+
+          print(last_modified)
+          table_query_trans["query"] = {column_name: {"$gt":0}}
+          table_query_agg["query"] = {column_name: {"$gt":0}}
+          json.dump(table_query_trans, open(transformed_query_trans, 'w'))
+          json.dump(table_query_agg, open(transformed_query_agg, 'w'))
+
+      import json
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Query maker', description='')
+      _parser.add_argument("--table-details", dest="table_details", type=json.loads, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--greenplum-details", dest="greenplum_details", type=json.loads, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--table-query-trans", dest="table_query_trans", type=json.loads, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--table-query-agg", dest="table_query_agg", type=json.loads, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--transformed-query-trans", dest="transformed_query_trans", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parser.add_argument("--transformed-query-agg", dest="transformed_query_agg", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = query_maker(**_parsed_args)
+    args:
+    - --table-details
+    - {inputValue: table_details}
+    - --greenplum-details
+    - {inputValue: greenplum_details}
+    - --table-query-trans
+    - {inputValue: table_query_trans}
+    - --table-query-agg
+    - {inputValue: table_query_agg}
+    - --transformed-query-trans
+    - {outputPath: transformed_query_trans}
+    - --transformed-query-agg
+    - {outputPath: transformed_query_agg}
